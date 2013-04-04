@@ -3,7 +3,8 @@ global magic
 global mbd
 global page_directory
 global PAGE_TABLES
-
+global multiboot_info
+global bootstrap_print
 
 extern kmain
 extern _start
@@ -27,7 +28,7 @@ bootstrap:
     mov     [mbd], ebx                      ; Store pointer to multiboot info structure
 
     push    msg_welcome                     ; Display a nice hello world
-    call    print
+    call    bootstrap_print
     add     esp, 4                          ; Clean up the stack
 
 check_magic:
@@ -46,6 +47,17 @@ set_gdt:
     mov     fs, ax
     mov     gs, ax
     mov     ss, ax
+
+copy_multiboot:
+    mov     ecx, 22                         ; 1/4 length of multiboot structure (4 bytes at a time)
+    mov     eax, [mbd]                      ; Get the location of the multiboot structure
+    mov     ebx, multiboot_info             ; Get the destination location
+    .CopyLoop:
+        mov     edx, [eax]
+        mov     [ebx], edx
+        add     eax, 4
+        add     ebx, 4
+        loop .CopyLoop
 
 init_paging:
     ; Set up the page directory
@@ -111,11 +123,11 @@ halt:
 bad_magic:
     ; Inform the user about a bad magic value and die
     push    msg_bad_magic
-    call    print
+    call    bootstrap_print
     add     esp, 4
     jmp     halt
 
-print:
+bootstrap_print:
     ; print out a message
     mov     eax, [esp+4]                    ; Get pointer to message
     mov     ebx, 0xB8000                    ; Video Memory
@@ -174,6 +186,9 @@ align 4
 stack:  resb STACKSIZE
 magic:  resd 1                              ; Stores the multiboot magic number
 mbd:    resd 1                              ; Pointer to the multiboot info structure
+
+align 4
+multiboot_info: resb 88                     ; Store a copy of the multiboot_info
 
 ;
 ; Page Data Structures
