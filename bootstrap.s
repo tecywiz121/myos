@@ -22,10 +22,17 @@ STACKSIZE equ 0x1000                        ; Amount of memory to reserve for th
 bootstrap:
     cli                                     ; Disable interrupts
 
-    .AllocateStack:
     mov     esp, stack + STACKSIZE          ; Create a stack for the bootstrap
     mov     [magic], eax                    ; Store the multiboot magic number
     mov     [mbd], ebx                      ; Store pointer to multiboot info structure
+
+    push    msg_welcome                     ; Display a nice hello world
+    call    print
+    add     esp, 4                          ; Clean up the stack
+
+check_magic:
+    cmp     DWORD [magic], 0x2BADB002       ; Make sure the magic value is correct
+    jne     bad_magic                       ; If its not, print a message and die
 
 set_gdt:
     lgdt    [GDTR]                          ; Load the new GDT
@@ -42,7 +49,7 @@ set_gdt:
 
 init_paging:
     ; Set up the page directory
-    %assign n_pages 2                       ; The number of pages to build
+    %assign n_pages 1                       ; The number of pages to build
     mov     cx, n_pages
     mov     ebx, PAGE_DIRECTORY
 
@@ -96,11 +103,38 @@ enable_paging:
 kernel:
     call    kmain
 
-kernel_return:
+halt:
     ; Halt the machine if the kernel ever returns
     hlt
-    jmp $
+    jmp     halt
 
+bad_magic:
+    ; Inform the user about a bad magic value and die
+    push    msg_bad_magic
+    call    print
+    add     esp, 4
+    jmp     halt
+
+print:
+    ; print out a message
+    mov     eax, [esp+4]                    ; Get pointer to message
+    mov     ebx, 0xB8000                    ; Video Memory
+    mov     ecx, 0
+    .PrintLoop:
+        mov     cl, [eax]
+        cmp     cl, 0
+        je      .Return
+        mov     [ebx], cl
+        mov     BYTE [ebx+1], 0x07
+        add     ebx, 2
+        inc     eax
+        jmp     .PrintLoop
+    .Return:
+        ret
+
+section .rodata
+msg_welcome:    db  'hello, world', 0x0
+msg_bad_magic:  db  'Bad Multiboot Magic Number', 0x0
 
 section .data
 

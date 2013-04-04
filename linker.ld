@@ -12,6 +12,7 @@ SECTIONS
       *(.multiboot)
       . = ALIGN(0x1000);
       bootstrap.o (.text)
+      bootstrap.o (.rodata)
       . = ALIGN(0x1000);
       bootstrap.o (.data)
       . = ALIGN(0x1000);
