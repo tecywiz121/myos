@@ -1,21 +1,19 @@
 #include <stdint.h>
 #include "multiboot.h"
-
-extern multiboot_info_t multiboot_info;
-extern void bootstrap_print(char * str);
+#include "kernel.h"
+#include "memmgr_physical.h"
 
 void kmain(void)
 {
     uint32_t flags = multiboot_info.flags;
 
-    if (0 < flags & MULTIBOOT_INFO_MEMORY)
+    if (0 >= (flags & MULTIBOOT_INFO_MEMORY))
     {
-        bootstrap_print("Memory info is valid");
+        bootstrap_print("Memory info is not valid");
+        return;
     }
-    else
-    {
-        bootstrap_print("Memory info is not vaild");
-    }
+
+    memmgr_physical_init();
 
     for (;;);
 }

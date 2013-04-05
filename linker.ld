@@ -7,7 +7,7 @@ ENTRY(bootstrap)
 SECTIONS
 {
    . = KERNEL_LOW;   /* Low Memory Address = 2Mb */
-
+   _b_start = .;
    .bootstrap : AT(ADDR(.bootstrap)) {
       *(.multiboot)
       . = ALIGN(0x1000);
@@ -20,6 +20,7 @@ SECTIONS
       . = ALIGN(0x1000);
       bootstrap.o (.ehframe)
    }
+   _b_end = .;
 
    . += KERNEL_BASE;
    . = ALIGN(0x1000);
