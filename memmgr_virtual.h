@@ -46,7 +46,7 @@ typedef struct page_directory
   Sets up the environment, page directories etc and
   enables paging.
 **/
-void memmgr_virtual_init(void);
+void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *page_table769);
 
 /**
  * Returns the lowest virtual address that maps to the specified physical address.
