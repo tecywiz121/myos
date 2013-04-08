@@ -21,7 +21,6 @@ set_gdt:
     mov     fs, ax
     mov     gs, ax
     mov     ss, ax
-    jmp     $
     call    kmain
 
 section .data

@@ -2,7 +2,6 @@
 #include <stdalign.h>
 #include <stdbool.h>
 #include "util.h"
-#include "native.h"
 #include "memmgr_physical.h"
 #include "memmgr_virtual.h"
 
@@ -34,7 +33,8 @@ void memmgr_virtual_init(void)
     /* Remap the structures created by the bootstrap after the kernel */
     int tableIdx = 0;
     memmgr_virtual_map_page(&page_table769.pages[tableIdx++],
-                            &_b_page_directory, true, true);/* Map the page directory */
+                            (uintptr_t)&_b_page_directory,
+                            true, true);                    /* Map the page directory */
     for (int ii = 0; ii < 1024; ii++)                       /* Map all present pages */
     {
         uintptr_t addrPhy = page_directory.tablesPhysical[ii];
