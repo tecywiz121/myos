@@ -1,12 +1,12 @@
 global bootstrap
-global magic
-global mbd
-global page_directory
-global PAGE_TABLES
-global multiboot_info
-global bootstrap_print
+global _b_magic
+global _b_mbd
+global _b_page_directory
+global _b_PAGE_TABLES
+global _b_multiboot_info
+global _b_print
 
-extern kmain
+extern kinit
 extern _start
 extern _start_pa
 extern _end_pa
@@ -24,34 +24,21 @@ bootstrap:
     cli                                     ; Disable interrupts
 
     mov     esp, stack + STACKSIZE          ; Create a stack for the bootstrap
-    mov     [magic], eax                    ; Store the multiboot magic number
-    mov     [mbd], ebx                      ; Store pointer to multiboot info structure
+    mov     [_b_magic], eax                 ; Store the multiboot magic number
+    mov     [_b_mbd], ebx                   ; Store pointer to multiboot info structure
 
     push    msg_welcome                     ; Display a nice hello world
-    call    bootstrap_print
+    call    _b_print
     add     esp, 4                          ; Clean up the stack
 
 check_magic:
-    cmp     DWORD [magic], 0x2BADB002       ; Make sure the magic value is correct
+    cmp     DWORD [_b_magic], 0x2BADB002    ; Make sure the magic value is correct
     jne     bad_magic                       ; If its not, print a message and die
-
-set_gdt:
-    lgdt    [GDTR]                          ; Load the new GDT
-    jmp     0x08:.ReloadSegments            ; Far jump to activate the new segments
-
-    .ReloadSegments:
-    ; Load the new data segment
-    mov     ax, 0x10
-    mov     ds, ax
-    mov     es, ax
-    mov     fs, ax
-    mov     gs, ax
-    mov     ss, ax
 
 copy_multiboot:
     mov     ecx, 22                         ; 1/4 length of multiboot structure (4 bytes at a time)
-    mov     eax, [mbd]                      ; Get the location of the multiboot structure
-    mov     ebx, multiboot_info             ; Get the destination location
+    mov     eax, [_b_mbd]                   ; Get the location of the multiboot structure
+    mov     ebx, _b_multiboot_info          ; Get the destination location
     .CopyLoop:
         mov     edx, [eax]
         mov     [ebx], edx
@@ -63,7 +50,7 @@ init_paging:
     ; Set up the page directory
     %assign n_pages 1                       ; The number of pages to build
     mov     cx, n_pages
-    mov     ebx, PAGE_DIRECTORY
+    mov     ebx, _b_page_directory
 
     .DirectoryLoop:
         or      DWORD [ebx], 0x03           ; Set the present and read/write bits
@@ -105,7 +92,7 @@ init_paging:
         loop .KernelMap
 
 enable_paging:
-    mov     eax, PAGE_DIRECTORY
+    mov     eax, _b_page_directory
     mov     cr3, eax
 
     mov     eax, cr0
@@ -113,7 +100,7 @@ enable_paging:
     mov     cr0, eax
 
 kernel:
-    call    kmain
+    call    kinit
 
 halt:
     ; Halt the machine if the kernel ever returns
@@ -123,11 +110,11 @@ halt:
 bad_magic:
     ; Inform the user about a bad magic value and die
     push    msg_bad_magic
-    call    bootstrap_print
+    call    _b_print
     add     esp, 4
     jmp     halt
 
-bootstrap_print:
+_b_print:
     ; print out a message
     mov     eax, [esp+4]                    ; Get pointer to message
     mov     ebx, 0xB8000                    ; Video Memory
@@ -150,18 +137,8 @@ msg_bad_magic:  db  'Bad Multiboot Magic Number', 0x0
 
 section .data
 
-GDTR:                                       ; GDT Pointer structure
-    dw      GDT_End - GDT - 1               ; 16-bit length of GDT
-    dd      GDT                             ; 32-bit pointer to GDT
-GDT:
-    dd      0x00000000, 0x00000000          ; GDT[0] - Null GDT entry
-    dd      0x0000FFFF, 0x00CF9C00          ; GDT[1] - Code segment
-    dd      0x0000FFFF, 0x00CF9200          ; GDT[2] - Data segment
-GDT_End:
-
-
 align 0x1000
-PAGE_DIRECTORY:                             ; Array of pointers to page tables
+_b_page_directory:                          ; Array of pointers to page tables
 %assign ii 0                                ; Store pointers to pages created below
 %rep n_pages
     dd page_table%+ii
@@ -184,11 +161,11 @@ section .bss
 
 align 4
 stack:  resb STACKSIZE
-magic:  resd 1                              ; Stores the multiboot magic number
-mbd:    resd 1                              ; Pointer to the multiboot info structure
+_b_magic:  resd 1                           ; Stores the multiboot magic number
+_b_mbd:    resd 1                           ; Pointer to the multiboot info structure
 
 align 4
-multiboot_info: resb 88                     ; Store a copy of the multiboot_info
+_b_multiboot_info: resb 88                  ; Store a copy of the multiboot_info
 
 ;
 ; Page Data Structures

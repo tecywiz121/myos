@@ -4,7 +4,7 @@ CFLAGS	= -g -gdwarf-2 -Wall -Wextra -pedantic -std=c11 -ffreestanding -mno-red-z
 LD		= ld
 LDFLAGS	= -T linker.ld -melf_i386 -g -nostdinc -nostdlib
 
-OBJFILES	= multiboot.o bootstrap.o loader.o memmgr_physical.o kernel.o
+OBJFILES	= multiboot.o bootstrap.o memmgr_physical.o memmgr_virtual.o loader.o kernel.o
 
 all: kernel.bin
 
