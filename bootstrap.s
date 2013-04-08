@@ -1,6 +1,4 @@
 global bootstrap
-global _b_magic
-global _b_mbd
 global _b_page_directory
 global _b_PAGE_TABLES
 global _b_multiboot_info
