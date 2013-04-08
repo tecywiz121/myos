@@ -49,6 +49,13 @@ typedef struct page_directory
 void memmgr_virtual_init(void);
 
 /**
+ * Returns the lowest virtual address that maps to the specified physical address.
+ * If no such mapping can be found, it returns ~0. This function is woefully
+ * inefficient, so avoid using it, especially once the page directory gets large.
+ */
+void *memmgr_virtual_phy_to_virt(page_directory_t* page_directory, uintptr_t addr);
+
+/**
   Causes the specified page directory to be loaded into the
   CR3 register.
 **/

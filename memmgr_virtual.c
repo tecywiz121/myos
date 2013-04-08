@@ -43,7 +43,7 @@ void memmgr_virtual_init(void)
             addrPhy &= 0xFFFFF000;                          /* Convert entry to physical address */
 
             uintptr_t addrVirt = (769u*1024u*PAGE_SIZE);    /* Address of first byte in table 769 */
-            addrVirt += 1024u * tableIdx;                   /* Add the offset of the current page */
+            addrVirt += PAGE_SIZE * tableIdx;               /* Add the offset of the current page */
 
             memmgr_virtual_map_page(&page_table769.pages[tableIdx++], addrPhy, true, true);
 
@@ -68,6 +68,33 @@ void memmgr_virtual_init(void)
     page_directory.tablesPhysical = (uint32_t*)(769u * 1024u * PAGE_SIZE);
 }
 
+/*
+ * Returns the lowest virtual address that corresponds to the physical
+ * address, or ~0x0 if no mapping exists.
+ */
+void *memmgr_virtual_phy_to_virt(page_directory_t* page_directory, uintptr_t addr)
+{
+    uintptr_t offset = addr % PAGE_SIZE;                            /* Offset from page start */
+    addr /= PAGE_SIZE;                                              /* Only need the 20 most significant bits */
+    for (int ii = 0; ii < 1024; ii++)
+    {
+        if ((page_directory->tablesPhysical[ii] & 1) > 0)           /* If the page directory is present */
+        {
+            for (int jj = 0; jj < 1024; jj++)
+            {
+                page_t *page = &page_directory->tables[ii]->pages[jj];
+                if (page->present && page->frame == addr)
+                {
+                    return (void*)(ii*1024u*PAGE_SIZE + jj*PAGE_SIZE + offset);
+                }
+            }
+        }
+    }
+
+    return (void *)~0;
+}
+
+#if (0)
 static uint32_t memmgr_virtual_map_region(page_table_t* page_table, int table_idx, uintptr_t phy_start, uintptr_t phy_end, bool is_kernel, bool is_writable)
 {
     uintptr_t count = idivc(phy_end - phy_start, PAGE_SIZE);
@@ -80,6 +107,7 @@ static uint32_t memmgr_virtual_map_region(page_table_t* page_table, int table_id
 
     return (phy_start & PAGE_SIZE) + PAGE_SIZE*table_idx;       /* Return the offset into the memory described by the page table where the mapped region exists */
 }
+#endif
 
 static void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable)
 {
