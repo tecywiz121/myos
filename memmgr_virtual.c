@@ -15,8 +15,6 @@ extern uint32_t KERNEL_BASE;
 /*
  * Internal Function
  */
-static void memmgr_virtual_flush_tlb(void);
-static void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable);
 
 void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *page_table769)
 {
@@ -102,7 +100,7 @@ static uint32_t memmgr_virtual_map_region(page_table_t* page_table, int table_id
 }
 #endif
 
-static void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable)
+void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable)
 {
     page->present = 1;
     page->rw = (is_writable) ? 1 : 0;
@@ -110,7 +108,7 @@ static void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kerne
     page->frame = frame / PAGE_SIZE;
 }
 
-static void memmgr_virtual_flush_tlb(void)
+void memmgr_virtual_flush_tlb(void)
 {
     __asm__ volatile (
         "mov eax, cr3;"

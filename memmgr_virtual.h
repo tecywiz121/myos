@@ -2,6 +2,7 @@
 #define PAGING_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdalign.h>
 #include "registers.h"
 
@@ -54,6 +55,16 @@ void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *pa
  * inefficient, so avoid using it, especially once the page directory gets large.
  */
 void *memmgr_virtual_phy_to_virt(page_directory_t* page_directory, uintptr_t addr);
+
+/**
+ * Writes the proper values for a page_t
+ */
+void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable);
+
+/**
+ * Flush the entire tlb
+ */
+void memmgr_virtual_flush_tlb(void);
 
 /**
   Causes the specified page directory to be loaded into the

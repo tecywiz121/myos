@@ -8,15 +8,20 @@
 
 struct memmgr_physical
 {
-    uint32_t total_memory;
-    uint32_t available_memory;
-
     uint32_t *frames;
-    uint32_t n_frames;
+    uintptr_t n_frames;
 };
 typedef struct memmgr_physical memmgr_physical_t;
 
 
-void memmgr_physical_init(void);
+void memmgr_physical_init(memmgr_physical_t *self, uintptr_t highest_addr);
 
+/* Returns the number of bytes required to handle a map upto highest_addr */
+uintptr_t memmgr_physical_size(memmgr_physical_t *self);
+
+/* Set the position of frames and initialize it */
+void memmgr_physical_set_frames(memmgr_physical_t *self, uint32_t *frames);
+
+/* Scan for and mark the kernel frames as being in use */
+void memmgr_mark_kernel_frames(memmgr_physical_t *self);
 #endif

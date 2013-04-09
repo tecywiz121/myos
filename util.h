@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
-extern void idivc(uint32_t x, uint32_t y);
-#define idivc(x, y) (x ? (((x-1)/y) + 1) : 0)
+static inline uintptr_t idivc(uintptr_t x, uintptr_t y)
+{
+    return (x ? (((x-1)/y) + 1) : 0);
+}
 
 #endif
