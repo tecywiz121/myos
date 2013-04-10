@@ -8,29 +8,19 @@
 
 typedef void (mmap_callback_t)(multiboot_memory_map_t*);
 
-/*
- * Page Table that maps the bootstrap stuff above KERNEL_BASE
- */
+/* Page Table that maps the bootstrap stuff above KERNEL_BASE */
 alignas(0x1000) static page_table_t page_table769;
 
-/*
- * Structure for referencing the page directory created by the bootstrap
- */
+/* Structure for referencing the page directory created by the bootstrap */
 static page_directory_t page_directory;
 
-/*
- * The highest physical address reported by the bootloader
- */
+/* The highest physical address reported by the bootloader */
 static uintptr_t max_physical_address = 0;
 
-/*
- * A very, very basic memory allocator.
- */
+/* A very, very basic memory allocator. */
 static memmgr_dumb_t memmgr_dumb;
 
-/*
- * The physical memory manager
- */
+/* The physical memory manager */
 static memmgr_physical_t memmgr_phy;
 
 static void die(char *msg);
@@ -56,6 +46,8 @@ void kmain(void)
     uintptr_t size = memmgr_physical_size(&memmgr_phy);
     void *frame_bitmap = dumb_alloc(&memmgr_dumb, size);        /* Allocate memory for memmgr_physical */
     memmgr_physical_set_frames(&memmgr_phy, (uint32_t *)frame_bitmap);
+
+
     memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
 
     die("boot complete!");
