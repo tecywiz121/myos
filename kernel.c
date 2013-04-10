@@ -54,7 +54,7 @@ void kmain(void)
 
     unmap_bootstrap();
 
-    //memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
+    memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
 
     die("boot complete!");
 }
