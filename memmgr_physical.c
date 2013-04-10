@@ -6,13 +6,6 @@
 #define INDEX_FROM_BIT(a) (a/(8*4))
 #define OFFSET_FROM_BIT(a) (a%(8*4))
 
-/*
- * Symbols provided by the linker
- */
-extern uint8_t _b_start;        /* The start address of the bootstrap, and some of our data */
-extern uint8_t _b_end;          /* End address of the bootstrap */
-extern uint8_t _start_pa;       /* The physical start address of the kernel */
-extern uint8_t _end_pa;         /* The physical end address of the kernel */
 
 /*
  * Internal Function Declarations
@@ -21,7 +14,6 @@ static void set_frame(memmgr_physical_t *self, uintptr_t frame_addr);
 static void clear_frame(memmgr_physical_t *self, uintptr_t frame_addr);
 static uint32_t test_frame(memmgr_physical_t *self, uintptr_t frame_addr);
 static uint32_t first_frame(memmgr_physical_t *self);
-static void set_range(memmgr_physical_t *self, uintptr_t start_addr, uintptr_t count);
 
 
 void memmgr_physical_init(memmgr_physical_t *self, uintptr_t highest_addr)
@@ -62,8 +54,9 @@ void memmgr_set_from_page_directory(memmgr_physical_t *self, page_directory_t* p
     page_directory_walk(page_directory, 0, set_page_cb, self);
 }
 
-static void set_range(memmgr_physical_t *self, uintptr_t start_addr, uintptr_t count)
+void memmgr_physical_set_range(memmgr_physical_t *self, uintptr_t start_addr, uintptr_t count)
 {
+    /* TODO: Optimise this to set 32 bits at a time instead of 1 bit at a time */
     for (uint32_t ii = 0; ii < count; ii++)
     {
         uint32_t frame_addr = start_addr + (ii * PAGE_SIZE);
@@ -79,6 +72,11 @@ static void set_range(memmgr_physical_t *self, uintptr_t start_addr, uintptr_t c
 // Static function to set a bit in the frames bitset
 static void set_frame(memmgr_physical_t *self, uintptr_t frame_addr)
 {
+    if (frame_addr > self->n_frames * PAGE_SIZE)
+    {
+        return; // Past the end of the array, ignored
+    }
+
     uintptr_t frame = frame_addr/PAGE_SIZE;
     uintptr_t idx = INDEX_FROM_BIT(frame);
     uintptr_t off = OFFSET_FROM_BIT(frame);
@@ -88,6 +86,10 @@ static void set_frame(memmgr_physical_t *self, uintptr_t frame_addr)
 // Static function to clear a bit in the frames bitset
 static void clear_frame(memmgr_physical_t *self, uintptr_t frame_addr)
 {
+    if (frame_addr > self->n_frames * PAGE_SIZE)
+    {
+        return; // Past the end of the array, ignored
+    }
     uintptr_t frame = frame_addr/PAGE_SIZE;
     uintptr_t idx = INDEX_FROM_BIT(frame);
     uintptr_t off = OFFSET_FROM_BIT(frame);
@@ -97,6 +99,10 @@ static void clear_frame(memmgr_physical_t *self, uintptr_t frame_addr)
 // Static function to test if a bit is set.
 static uint32_t test_frame(memmgr_physical_t *self, uintptr_t frame_addr)
 {
+    if (frame_addr > self->n_frames * PAGE_SIZE)
+    {
+        return 1; // Past the end of the array, assume its used
+    }
     uintptr_t frame = frame_addr/PAGE_SIZE;
     uintptr_t idx = INDEX_FROM_BIT(frame);
     uintptr_t off = OFFSET_FROM_BIT(frame);

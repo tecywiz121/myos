@@ -74,6 +74,11 @@ typedef int (pg_dir_page_cb)(void* data, uintptr_t dir_offset, uintptr_t page_of
 void page_directory_walk(page_directory_t* page_directory, pg_dir_table_cb* table_cb, pg_dir_page_cb* page_cb, void *data);
 
 /**
+ * Removes the mapping for a specified virtual address
+ */
+void memmgr_virtual_unmap(page_directory_t* page_directory, void* addr);
+
+/**
  * Writes the proper values for a page_t
  */
 void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable);
@@ -82,6 +87,11 @@ void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool
  * Flush the entire tlb
  */
 void memmgr_virtual_flush_tlb(void);
+
+/**
+ * Flush the TLB entry that is associated with addr
+ */
+void memmgr_virtual_flush_addr(void* addr);
 
 /**
   Causes the specified page directory to be loaded into the

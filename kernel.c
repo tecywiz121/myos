@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdalign.h>
+#include "util.h"
 #include "multiboot.h"
 #include "kernel.h"
 #include "memmgr_physical.h"
@@ -26,6 +27,8 @@ static memmgr_physical_t memmgr_phy;
 static void die(char *msg);
 static void multiboot_walk_mmap(mmap_callback_t* cb);
 static void update_max_phy_addr(multiboot_memory_map_t *mmap);
+static void apply_mmap_to_memmgr(multiboot_memory_map_t *mmap);
+static void unmap_bootstrap(void);
 
 void kmain(void)
 {
@@ -47,8 +50,11 @@ void kmain(void)
     void *frame_bitmap = dumb_alloc(&memmgr_dumb, size);        /* Allocate memory for memmgr_physical */
     memmgr_physical_set_frames(&memmgr_phy, (uint32_t *)frame_bitmap);
 
+    multiboot_walk_mmap(&apply_mmap_to_memmgr);                 /* Walk the mmap again and apply it to the memmgr */
 
-    memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
+    unmap_bootstrap();
+
+    //memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
 
     die("boot complete!");
 }
@@ -56,12 +62,22 @@ void kmain(void)
 /* Callback that finds the upper limit to physical memory */
 static void update_max_phy_addr(multiboot_memory_map_t *mmap)
 {
-    if (mmap->addr + mmap->len > max_physical_address)
+    if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE && mmap->addr + mmap->len > max_physical_address)
     {
         max_physical_address = mmap->addr + mmap->len;
     }
 }
 
+/* Callback that applies the multiboot mmap to memmgr_phy */
+static void apply_mmap_to_memmgr(multiboot_memory_map_t *mmap)
+{
+    if (mmap->type != MULTIBOOT_MEMORY_AVAILABLE)
+    {
+        memmgr_physical_set_range(&memmgr_phy, mmap->addr, idivc(mmap->len, PAGE_SIZE));
+    }
+}
+
+/* Calls cb for every entry in the multiboot memory map */
 static void multiboot_walk_mmap(mmap_callback_t* cb)
 {
     multiboot_info_t *mbt = &_b_multiboot_info;     /* I just wanted a shorthand */
@@ -84,17 +100,34 @@ static void multiboot_walk_mmap(mmap_callback_t* cb)
             break;
         }
 
-        if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
-        {
-            cb(mmap);
-        }
+        cb(mmap);
 
         mmap_phy = (multiboot_memory_map_t*)((uintptr_t)mmap_phy + mmap->size + sizeof(uint32_t));
     }
 }
 
+static void unmap_bootstrap(void)
+{
+    uintptr_t start = (uintptr_t)&_b_start;
+    uintptr_t end = (uintptr_t)&_b_end;
+
+    for (uintptr_t ii = start; ii < end; ii+=PAGE_SIZE)
+    {
+        memmgr_virtual_unmap(&page_directory, (void*)ii);
+    }
+}
+
 static void die(char *msg)
 {
-    _b_print(msg);
-    for (;;);
+    volatile uint8_t *video = (volatile uint8_t*)0xB8000;
+    while (*msg != 0)
+    {
+        *video++ = *msg++;
+        *video++ = 0x07;
+    }
+
+    for (;;)
+    {
+        __asm__ ("hlt");
+    }
 }

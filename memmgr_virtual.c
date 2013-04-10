@@ -9,7 +9,6 @@
  * Externs
  */
 extern uint32_t _b_page_directory;
-extern uint32_t KERNEL_BASE;
 
 /*
  * Internal Function
@@ -58,6 +57,22 @@ void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *pa
     page_directory->tablesPhysical = (uint32_t*)(769u * 1024u * PAGE_SIZE);
 }
 
+/* Clears the mapping for a virtual address */
+void memmgr_virtual_unmap(page_directory_t* page_directory, void* addr)
+{
+    uintptr_t page = (uintptr_t)addr / PAGE_SIZE;           /* Convert address to page number */
+    uintptr_t o_dir = page / 1024;                          /* Offset into page directory */
+    uintptr_t o_tbl = page % 1024;                          /* Offset into page table */
+
+    if (!(page_directory->tablesPhysical[o_dir] & 1))       /* Check the present bit on page table */
+    {
+        return;                                             /* No page table, so address can't be mapped */
+    }
+
+    page_table_t *table = page_directory->tables[o_dir];    /* Get the page table */
+    table->pages[o_tbl].present = 0;                        /* Clear the present bit */
+    memmgr_virtual_flush_addr(addr);                        /* Update the TLB */
+}
 
 
 /* Walk a page directory calling table_cb for each present table, and page_cb for each present page */
@@ -148,5 +163,15 @@ void memmgr_virtual_flush_tlb(void)
     __asm__ volatile (
         "mov eax, cr3;"
         "mov cr3, eax;"
+    );
+}
+
+void memmgr_virtual_flush_addr(void* addr)
+{
+    __asm__ volatile (
+        "invlpg [%0]"
+        : /* No output values */
+        : "r" ((uintptr_t)addr)
+        : "memory"
     );
 }

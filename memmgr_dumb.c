@@ -5,9 +5,6 @@
 #include "memmgr_dumb.h"
 #include "util.h"
 
-extern uint32_t KERNEL_BASE;
-extern uint32_t _end_pa;
-
 static uintptr_t advance_free_page(memmgr_dumb_t *memmgr_dumb, uintptr_t n_pages);
 static uintptr_t get_frame(memmgr_dumb_t *memmgr_dumb);
 static void map_frame_to_page(memmgr_dumb_t *memmgr_dumb, uintptr_t page);
