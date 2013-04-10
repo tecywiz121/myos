@@ -8,6 +8,8 @@ extern kinit
 extern _start
 extern _start_pa
 extern _end_pa
+extern _b_start
+extern _b_end
 extern KERNEL_BASE
 
 section .text
@@ -57,7 +59,14 @@ init_paging:
 
     or DWORD [kernel_page], 0x03            ; Set the present bit on the kernel page
 
-    mov     cx, 512                         ; Identity map the first two megabytes
+    jmp     $
+    mov     cx, 256                         ; Identity map the first megabyte
+
+    mov     ebx, _b_end
+    sub     ebx, _b_start                   ; Calculate length of bootstrap
+    shr     ebx, 12                         ; Divide by page size
+    add     cx, bx                          ; Identity map that as well (assuming _b_end - _b_start fits in cx)
+
     mov     ebx, page_table0
     mov     edx, 1                          ; Bit 0 is present
 
