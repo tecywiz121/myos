@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "util.h"
+#include "memmgr_virtual.h"
 #include "memmgr_physical.h"
 
 #define INDEX_FROM_BIT(a) (a/(8*4))
@@ -30,7 +31,7 @@ void memmgr_physical_init(memmgr_physical_t *self, uintptr_t highest_addr)
 
 uintptr_t memmgr_physical_size(memmgr_physical_t *self)
 {
-    return self->n_frames * sizeof(uint32_t);
+    return idivc(self->n_frames, sizeof(uint32_t)) * sizeof(uint32_t);
 }
 
 void memmgr_physical_set_frames(memmgr_physical_t *self, uint32_t *frames)
@@ -38,28 +39,27 @@ void memmgr_physical_set_frames(memmgr_physical_t *self, uint32_t *frames)
     self->frames = frames;
 
     /* Zero the memory */
-    for (uintptr_t ii = 0; ii < self->n_frames; ii++)
+    for (uintptr_t ii = 0; ii < idivc(self->n_frames, sizeof(uint32_t)); ii++)
     {
         frames[ii] = 0;
     }
 }
 
-void memmgr_mark_kernel_frames(memmgr_physical_t *self)
+/* Callback to map from page directory to used frames */
+static int set_page_cb(void* data, uintptr_t dir_offset, uintptr_t page_offset, page_t* page)
 {
-    /* TODO: Scan the page directory instead of doing this */
-    /* Mark the first megabyte for now */
-    uintptr_t count = (1024*1024) / PAGE_SIZE;
-    set_range(self, 0x0, count);
+    UNUSED(dir_offset);
+    UNUSED(page_offset);
+    memmgr_physical_t *self = (memmgr_physical_t*)data;
 
-    /* Mark the region that contains the bootstrap code */
-    uintptr_t n_bootstrap = (uintptr_t)(&_b_end - &_b_start);
-    count = idivc(n_bootstrap, PAGE_SIZE);
-    set_range(self, (uintptr_t)&_b_start, count);
+    uintptr_t frame_addr = page->frame * PAGE_SIZE;
+    set_frame(self, frame_addr);
+    return 0;
+}
 
-    /* Mark the region that contains the kernel */
-    uintptr_t n_kernel = (uintptr_t)(&_end_pa - &_start_pa);
-    count = idivc(n_kernel, PAGE_SIZE);
-    set_range(self, (uintptr_t)&_start_pa, count);
+void memmgr_set_from_page_directory(memmgr_physical_t *self, page_directory_t* page_directory)
+{
+    page_directory_walk(page_directory, 0, set_page_cb, self);
 }
 
 static void set_range(memmgr_physical_t *self, uintptr_t start_addr, uintptr_t count)

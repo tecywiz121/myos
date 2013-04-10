@@ -5,7 +5,6 @@
 #include "memmgr_physical.h"
 #include "memmgr_virtual.h"
 
-
 /*
  * Externs
  */
@@ -59,6 +58,51 @@ void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *pa
     page_directory->tablesPhysical = (uint32_t*)(769u * 1024u * PAGE_SIZE);
 }
 
+
+
+/* Walk a page directory calling table_cb for each present table, and page_cb for each present page */
+void page_directory_walk(page_directory_t* page_directory, pg_dir_table_cb* table_cb, pg_dir_page_cb* page_cb, void *data)
+{
+    for (int ii = 0; ii < 1024; ii++)
+    {
+        if ((page_directory->tablesPhysical[ii] & 1) > 0)           /* Check the present bit */
+        {
+            if (table_cb && table_cb(data, ii, page_directory->tables[ii]))
+            {
+                return;
+            }
+
+            if (page_cb)
+            {
+                for (int jj = 0; jj < 1024; jj++)
+                {
+                    page_t *page = &page_directory->tables[ii]->pages[jj];
+                    if (page->present && page_cb(data, ii, jj, page))
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Callback for finding a virtual address for a given physical address */
+static int phy_to_virt_page_cb(void* data, uintptr_t dir_offset, uintptr_t page_offset, page_t* page)
+{
+    uintptr_t **args = (uintptr_t**)data;
+    uintptr_t addr = *args[0];
+    uintptr_t *result = args[1];
+
+    if (page->present && page->frame == addr)
+    {
+        *result = dir_offset*1024u*PAGE_SIZE + page_offset*PAGE_SIZE;
+        return 1;                                                   /* Break early */
+    }
+
+    return 0;                                                       /* Continue executing */
+}
+
 /*
  * Returns the lowest virtual address that corresponds to the physical
  * address, or ~0x0 if no mapping exists.
@@ -66,23 +110,14 @@ void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *pa
 void *memmgr_virtual_phy_to_virt(page_directory_t* page_directory, uintptr_t addr)
 {
     uintptr_t offset = addr % PAGE_SIZE;                            /* Offset from page start */
-    addr /= PAGE_SIZE;                                              /* Only need the 20 most significant bits */
-    for (int ii = 0; ii < 1024; ii++)
-    {
-        if ((page_directory->tablesPhysical[ii] & 1) > 0)           /* If the page directory is present */
-        {
-            for (int jj = 0; jj < 1024; jj++)
-            {
-                page_t *page = &page_directory->tables[ii]->pages[jj];
-                if (page->present && page->frame == addr)
-                {
-                    return (void*)(ii*1024u*PAGE_SIZE + jj*PAGE_SIZE + offset);
-                }
-            }
-        }
-    }
+    addr /= PAGE_SIZE;                                              /* Only need 20 most sig. bits */
 
-    return (void *)~0;
+    uintptr_t result = ~0;                                          /* Storage for the callback */
+    uintptr_t *args[] = {&addr, &result};                           /* Arguments for the callback */
+    page_directory_walk(page_directory, 0, &phy_to_virt_page_cb, &args);
+
+    result += offset;
+    return (void*)result;
 }
 
 #if (0)

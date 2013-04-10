@@ -56,7 +56,7 @@ void kmain(void)
     uintptr_t size = memmgr_physical_size(&memmgr_phy);
     void *frame_bitmap = dumb_alloc(&memmgr_dumb, size);        /* Allocate memory for memmgr_physical */
     memmgr_physical_set_frames(&memmgr_phy, (uint32_t *)frame_bitmap);
-    memmgr_mark_kernel_frames(&memmgr_phy);
+    memmgr_set_from_page_directory(&memmgr_phy, &page_directory);
 
     die("boot complete!");
 }
@@ -94,7 +94,7 @@ static void multiboot_walk_mmap(mmap_callback_t* cb)
 
         if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            cb(mmap);        
+            cb(mmap);
         }
 
         mmap_phy = (multiboot_memory_map_t*)((uintptr_t)mmap_phy + mmap->size + sizeof(uint32_t));

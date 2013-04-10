@@ -57,6 +57,23 @@ void memmgr_virtual_bootstrap(page_directory_t *page_directory, page_table_t *pa
 void *memmgr_virtual_phy_to_virt(page_directory_t* page_directory, uintptr_t addr);
 
 /**
+ * Callback signature for page_directory_walk
+ */
+typedef int (pg_dir_table_cb)(void* data, uintptr_t dir_offset, page_table_t* table);
+
+/**
+ * Callback signature for page_directory_walk
+ */
+typedef int (pg_dir_page_cb)(void* data, uintptr_t dir_offset, uintptr_t page_offset, page_t* page);
+
+/**
+ * Walks a page directory, calling table_cb for each present page table, and
+ * page_cb for each present page.  Fairly expensive, so should be avoided
+ * where possible.
+ */
+void page_directory_walk(page_directory_t* page_directory, pg_dir_table_cb* table_cb, pg_dir_page_cb* page_cb, void *data);
+
+/**
  * Writes the proper values for a page_t
  */
 void memmgr_virtual_map_page(page_t *page, uintptr_t frame, bool is_kernel, bool is_writable);
