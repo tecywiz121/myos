@@ -59,7 +59,6 @@ init_paging:
 
     or DWORD [kernel_page], 0x03            ; Set the present bit on the kernel page
 
-    jmp     $
     mov     cx, 256                         ; Identity map the first megabyte
 
     mov     ebx, _b_end
