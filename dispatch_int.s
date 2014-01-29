@@ -3,7 +3,7 @@
 ;
 
 isr_dispatch:
-    popa
+    pusha
 
     mov     ax, ds                          ; Get the data segment
     push    eax                             ; Push it onto the stack
